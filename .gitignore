@@ -28,6 +28,12 @@ dbt/logs/
 airflow/logs/
 airflow/plugins/__pycache__/
 
+# Docker env (contains local secret paths)
+.env.airflow
+
+# Streamlit secrets
+streamlit/.streamlit/secrets.toml
+
 # OS
 .DS_Store
 Thumbs.db

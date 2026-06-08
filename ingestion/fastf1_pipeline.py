@@ -9,13 +9,12 @@ Usage:
 """
 
 import argparse
+import os
 
 import dlt
 import fastf1
 import pandas as pd
 
-# FastF1 local cache — avoids re-downloading data on repeated runs.
-fastf1.Cache.enable_cache("exploration/cache")
 
 
 def get_season_schedule(season: int) -> list[dict]:
@@ -178,6 +177,10 @@ def race_laps_resource(season: int):
 
 
 def run_pipeline(season: int):
+    cache_dir = os.environ.get("FASTF1_CACHE_DIR", "exploration/cache")
+    os.makedirs(cache_dir, exist_ok=True)
+    fastf1.Cache.enable_cache(cache_dir)
+
     pipeline = dlt.pipeline(
         pipeline_name="fastf1",
         destination="filesystem",

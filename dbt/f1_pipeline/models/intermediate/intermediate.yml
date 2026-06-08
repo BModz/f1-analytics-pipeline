@@ -1,0 +1,50 @@
+version: 2
+
+models:
+  - name: int_race_results_enriched
+    description: >
+      Race results joined with driver biographical data. One row per driver per race.
+      Adds driver nationality, date of birth, and derived fields like positions gained.
+    columns:
+      - name: season
+        description: F1 season year
+        tests:
+          - not_null
+      - name: round_number
+        description: Race round number within the season
+        tests:
+          - not_null
+      - name: driver_code
+        description: Three-letter driver abbreviation (e.g. VER, HAM)
+        tests:
+          - not_null
+      - name: finish_position
+        description: Final classified finishing position
+      - name: positions_gained
+        description: Grid position minus finish position — positive means overtakes net gained
+      - name: did_not_finish
+        description: True if the driver retired or was classified as DNF
+
+  - name: int_championship_progression
+    description: >
+      Driver championship standings after each round, joined with driver details
+      and race metadata. Includes window function fields to show round-on-round
+      points gains and position changes.
+    columns:
+      - name: season
+        tests:
+          - not_null
+      - name: round_number
+        tests:
+          - not_null
+      - name: driver_code
+        tests:
+          - not_null
+      - name: championship_position
+        description: Driver's position in the championship after this round
+      - name: cumulative_points
+        description: Total points accumulated by this driver up to and including this round
+      - name: points_this_round
+        description: Points earned in this specific round (derived via window function)
+      - name: prev_championship_position
+        description: Championship position after the previous round (null for round 1)

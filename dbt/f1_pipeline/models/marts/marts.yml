@@ -1,0 +1,83 @@
+version: 2
+
+models:
+  - name: mart_race_results
+    description: >
+      Enriched race results fact table. One row per driver per race.
+      Materialized as a table for fast dashboard queries.
+    columns:
+      - name: season
+        tests:
+          - not_null
+      - name: round_number
+        tests:
+          - not_null
+      - name: driver_code
+        tests:
+          - not_null
+      - name: finish_position
+        tests:
+          - not_null
+      - name: points
+        tests:
+          - not_null
+      - name: is_podium
+        description: True if driver finished in positions 1, 2, or 3
+      - name: is_winner
+        description: True if driver won the race
+
+  - name: mart_driver_standings
+    description: >
+      Driver championship standings after every round of the season.
+      Incremental model — on each Airflow run only newly completed rounds
+      are appended. Includes points earned per round and position changes.
+    columns:
+      - name: season
+        tests:
+          - not_null
+      - name: round_number
+        tests:
+          - not_null
+      - name: driver_code
+        tests:
+          - not_null
+      - name: championship_position
+        tests:
+          - not_null
+      - name: cumulative_points
+        tests:
+          - not_null
+
+  - name: mart_constructor_standings
+    description: >
+      Constructor championship standings after every round.
+      Includes points earned per round derived via window function.
+    columns:
+      - name: season
+        tests:
+          - not_null
+      - name: round_number
+        tests:
+          - not_null
+      - name: constructor_id
+        tests:
+          - not_null
+      - name: championship_position
+        tests:
+          - not_null
+
+exposures:
+  - name: f1_dashboard
+    type: dashboard
+    maturity: medium
+    owner:
+      name: BModz
+      email: ziaad.eltarahouni11@gmail.com
+    description: >
+      Streamlit dashboard presenting F1 season analytics.
+      Consumes mart_race_results, mart_driver_standings, and
+      mart_constructor_standings to power all dashboard views.
+    depends_on:
+      - ref('mart_race_results')
+      - ref('mart_driver_standings')
+      - ref('mart_constructor_standings')

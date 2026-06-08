@@ -73,13 +73,29 @@ with DAG(
         python_callable=_gcs_to_bigquery,
     )
 
-    dbt_run_staging = BashOperator(
-        task_id="dbt_run_staging",
+    dbt_run = BashOperator(
+        task_id="dbt_run",
         bash_command=(
             "cd /opt/airflow/dbt && "
             "dbt run --profiles-dir /opt/airflow/dbt --target prod"
         ),
     )
 
-    # FastF1 and Jolpica ingest in parallel, then load, then transform
-    [ingest_fastf1, ingest_jolpica] >> load_to_bigquery >> dbt_run_staging
+    dbt_test = BashOperator(
+        task_id="dbt_test",
+        bash_command=(
+            "cd /opt/airflow/dbt && "
+            "dbt test --profiles-dir /opt/airflow/dbt --target prod"
+        ),
+    )
+
+    dbt_snapshot = BashOperator(
+        task_id="dbt_snapshot",
+        bash_command=(
+            "cd /opt/airflow/dbt && "
+            "dbt snapshot --profiles-dir /opt/airflow/dbt --target prod"
+        ),
+    )
+
+    # FastF1 and Jolpica ingest in parallel → BQ load → dbt run → test + snapshot in parallel
+    [ingest_fastf1, ingest_jolpica] >> load_to_bigquery >> dbt_run >> [dbt_test, dbt_snapshot]

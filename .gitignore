@@ -1,0 +1,41 @@
+# Secrets — never commit these
+.dlt/secrets.toml
+.env
+*.json
+!.env.example
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.venv/
+venv/
+dist/
+build/
+*.egg-info/
+.eggs/
+
+# uv
+.python-version
+
+# dbt
+dbt/f1_pipeline/target/
+dbt/f1_pipeline/dbt_packages/
+dbt/f1_pipeline/logs/
+
+# Airflow
+airflow/logs/
+airflow/plugins/__pycache__/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/settings.json
+.idea/
+
+# Test / coverage
+.pytest_cache/
+.coverage
+htmlcov/

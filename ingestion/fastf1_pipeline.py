@@ -76,6 +76,57 @@ def race_results_resource(season: int):
             continue
 
 
+@dlt.resource(name="race_weather", write_disposition="replace")
+def race_weather_resource(season: int):
+    """
+    Yields one row per weather reading per race.
+    FastF1 records trackside conditions every ~1-2 minutes during a session:
+    air temp, track temp, humidity, wind speed/direction, rainfall.
+    ~60-100 rows per race.
+    """
+    events = get_season_schedule(season)
+
+    for event in events:
+        round_number = event["RoundNumber"]
+        event_name = event["EventName"]
+
+        print(f"  Loading weather: Round {round_number} — {event_name}")
+
+        try:
+            session = fastf1.get_session(season, round_number, "R")
+            session.load(
+                laps=False,
+                telemetry=False,
+                weather=True,
+                messages=False,
+            )
+
+            weather = session.weather_data.copy()
+
+            if weather.empty:
+                print(f"  WARNING: No weather data for round {round_number}")
+                continue
+
+            weather["season"] = season
+            weather["round_number"] = round_number
+            weather["event_name"] = event_name
+            weather["circuit"] = event["Location"]
+
+            # Convert timedelta session time to seconds
+            for col in weather.columns:
+                if pd.api.types.is_timedelta64_dtype(weather[col]):
+                    weather[col] = weather[col].apply(
+                        lambda x: x.total_seconds() if pd.notna(x) else None
+                    )
+
+            for row in weather.to_dict(orient="records"):
+                yield row
+
+        except Exception as e:
+            print(f"  WARNING: Could not load weather for round {round_number}: {e}")
+            continue
+
+
 @dlt.resource(name="race_laps", write_disposition="replace")
 def race_laps_resource(season: int):
     """
@@ -140,6 +191,7 @@ def run_pipeline(season: int):
         [
             race_results_resource(season=season),
             race_laps_resource(season=season),
+            race_weather_resource(season=season),
         ],
         loader_file_format="parquet",
     )

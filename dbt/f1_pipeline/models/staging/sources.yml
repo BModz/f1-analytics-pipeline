@@ -7,3 +7,8 @@ sources:
     tables:
       - name: race_results
       - name: race_laps
+      - name: race_weather
+      - name: drivers
+      - name: constructors
+      - name: driver_standings
+      - name: constructor_standings

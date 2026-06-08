@@ -19,9 +19,17 @@ GCS_BUCKET = "f1-analytics-pipeline-raw"
 BQ_DATASET = "raw"
 KEY_PATH = r"D:\secrets\f1-pipeline-key.json"
 
-TABLES = {
+FASTF1_TABLES = {
     "race_results": "race_results",
     "race_laps": "race_laps",
+    "race_weather": "race_weather",
+}
+
+JOLPICA_TABLES = {
+    "drivers": "drivers",
+    "constructors": "constructors",
+    "driver_standings": "driver_standings",
+    "constructor_standings": "constructor_standings",
 }
 
 
@@ -76,14 +84,20 @@ def run(season: int):
 
     print(f"\nLoading {season} season data from GCS → BigQuery...\n")
 
-    for gcs_folder, bq_table in TABLES.items():
+    for gcs_folder, bq_table in FASTF1_TABLES.items():
         prefix = f"fastf1_{season}/{gcs_folder}/"
         uris = list_parquet_files(gcs, prefix)
-
         if not uris:
             print(f"  WARNING: No Parquet files found at gs://{GCS_BUCKET}/{prefix}")
             continue
+        load_table(bq, bq_table, uris)
 
+    for gcs_folder, bq_table in JOLPICA_TABLES.items():
+        prefix = f"jolpica_{season}/{gcs_folder}/"
+        uris = list_parquet_files(gcs, prefix)
+        if not uris:
+            print(f"  WARNING: No Parquet files found at gs://{GCS_BUCKET}/{prefix}")
+            continue
         load_table(bq, bq_table, uris)
 
     print("\nAll tables loaded.")

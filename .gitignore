@@ -35,6 +35,9 @@ Thumbs.db
 .vscode/settings.json
 .idea/
 
+# FastF1 cache
+exploration/cache/
+
 # Test / coverage
 .pytest_cache/
 .coverage

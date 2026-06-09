@@ -26,7 +26,7 @@ jobs:
         run: uv sync
 
       - name: Run tests
-        run: uv runpytest tests/ -v --tb=short
+        run: uv run pytest tests/ -v --tb=short
 
   dbt-compile:
     name: dbt compile
@@ -53,4 +53,4 @@ jobs:
         working-directory: dbt/f1_pipeline
         env:
           GOOGLE_APPLICATION_CREDENTIALS: /tmp/key.json
-        run: uv rundbt compile --profiles-dir . --target prod
+        run: uv run dbt compile --profiles-dir . --target prod

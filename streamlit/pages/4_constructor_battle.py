@@ -70,10 +70,10 @@ fig.update_traces(line=dict(width=2.5), marker=dict(size=6))
 fig.update_layout(
     **PLOTLY_LAYOUT,
     height=460,
-    xaxis=dict(tickmode="linear", dtick=1, gridcolor="#2A2A2A"),
-    yaxis=dict(gridcolor="#2A2A2A"),
     title=dict(text=f"{season} Constructors' Championship — Cumulative Points", font=dict(size=16)),
 )
+fig.update_xaxes(tickmode="linear", dtick=1, gridcolor="#2A2A2A")
+fig.update_yaxes(gridcolor="#2A2A2A")
 st.plotly_chart(fig, use_container_width=True)
 
 st.markdown("---")

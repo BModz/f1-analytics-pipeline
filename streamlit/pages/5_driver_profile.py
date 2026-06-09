@@ -84,11 +84,11 @@ fig.add_trace(go.Bar(
 fig.update_layout(
     **PLOTLY_LAYOUT,
     height=400,
-    xaxis=dict(tickmode="linear", dtick=1, gridcolor="#2A2A2A", title="Round"),
-    yaxis=dict(gridcolor="#2A2A2A", title="Points"),
     title=dict(text=f"{selected_driver} — Points per Race ({season})", font=dict(size=16)),
     showlegend=False,
 )
+fig.update_xaxes(tickmode="linear", dtick=1, gridcolor="#2A2A2A", title="Round")
+fig.update_yaxes(gridcolor="#2A2A2A", title="Points")
 st.plotly_chart(fig, use_container_width=True)
 
 st.markdown("---")
@@ -128,11 +128,11 @@ if len(dnf_rows):
 fig2.update_layout(
     **PLOTLY_LAYOUT,
     height=360,
-    xaxis=dict(tickmode="linear", dtick=1, gridcolor="#2A2A2A", title="Round"),
-    yaxis=dict(autorange="reversed", gridcolor="#2A2A2A", title="Finish Position",
-               tickvals=list(range(1, 21, 2))),
     title=dict(text="Finishing Positions", font=dict(size=16)),
 )
+fig2.update_xaxes(tickmode="linear", dtick=1, gridcolor="#2A2A2A", title="Round")
+fig2.update_yaxes(autorange="reversed", gridcolor="#2A2A2A", title="Finish Position",
+                  tickvals=list(range(1, 21, 2)))
 st.plotly_chart(fig2, use_container_width=True)
 
 st.markdown("---")

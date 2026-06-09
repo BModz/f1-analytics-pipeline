@@ -23,12 +23,17 @@ import requests
 BASE_URL = "https://api.jolpi.ca/ergast/f1"
 
 
-def fetch(endpoint: str, retries: int = 3) -> dict:
-    """Fetch a Jolpica endpoint with basic retry logic."""
+def fetch(endpoint: str, retries: int = 5) -> dict:
+    """Fetch a Jolpica endpoint with retry logic and 429 back-off."""
     url = f"{BASE_URL}/{endpoint}"
     for attempt in range(retries):
         try:
             response = requests.get(url, timeout=15)
+            if response.status_code == 429:
+                wait = 10 * (attempt + 1)
+                print(f"  Rate limited — waiting {wait}s before retry {attempt + 1}/{retries}")
+                time.sleep(wait)
+                continue
             response.raise_for_status()
             return response.json()
         except requests.RequestException as e:
@@ -36,6 +41,7 @@ def fetch(endpoint: str, retries: int = 3) -> dict:
                 time.sleep(2 ** attempt)
             else:
                 raise e
+    raise RuntimeError(f"Failed to fetch {url} after {retries} retries")
 
 
 def get_round_count(season: int) -> int:
@@ -115,7 +121,7 @@ def driver_standings_resource(season: int):
                 "wins": int(s.get("wins", 0)),
             }
 
-        time.sleep(0.2)
+        time.sleep(1.0)
 
 
 @dlt.resource(name="constructor_standings", write_disposition="replace")
@@ -148,7 +154,7 @@ def constructor_standings_resource(season: int):
                 "wins": int(s.get("wins", 0)),
             }
 
-        time.sleep(0.2)
+        time.sleep(1.0)
 
 
 def run_pipeline(season: int):

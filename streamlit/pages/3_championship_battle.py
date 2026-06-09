@@ -1,15 +1,21 @@
 import plotly.express as px
+import plotly.graph_objects as go
 import streamlit as st
-
 from utils.bigquery import query, table
+from utils.styles import inject_css, PLOTLY_LAYOUT, F1_RED
 
-st.set_page_config(page_title="Championship Battle", page_icon="📈", layout="wide")
-st.title("📈 Driver Championship Battle")
+st.set_page_config(page_title="Championship Battle — F1 Analytics", layout="wide")
+inject_css()
 
-season = st.selectbox("Season", [2024], index=0)
-top_n = st.slider("Show top N drivers", min_value=3, max_value=10, value=5)
+st.title("Driver Championship")
 
-with st.spinner("Loading championship data..."):
+col_left, col_right = st.columns([3, 1])
+with col_left:
+    season = st.selectbox("Season", [2024], index=0, label_visibility="collapsed")
+with col_right:
+    top_n = st.slider("Drivers", min_value=3, max_value=10, value=5)
+
+with st.spinner("Loading..."):
     top_drivers = query(f"""
         select driver_name
         from {table('mart_driver_standings')}
@@ -26,16 +32,17 @@ with st.spinner("Loading championship data..."):
     driver_list = ", ".join(f"'{d}'" for d in top_drivers["driver_name"].tolist())
 
     progression = query(f"""
-        select
-            round_number,
-            event_name,
-            driver_name,
-            cumulative_points,
-            championship_position
+        select round_number, event_name, driver_name, cumulative_points, championship_position
         from {table('mart_driver_standings')}
-        where season = {season}
-          and driver_name in ({driver_list})
+        where season = {season} and driver_name in ({driver_list})
         order by round_number, championship_position
+    """)
+
+    points_per_round = query(f"""
+        select round_number, event_name, driver_name, points_this_round
+        from {table('mart_driver_standings')}
+        where season = {season} and driver_name in ({driver_list})
+        order by round_number, driver_name
     """)
 
 fig = px.line(
@@ -44,35 +51,21 @@ fig = px.line(
     y="cumulative_points",
     color="driver_name",
     markers=True,
-    labels={
-        "round_number": "Round",
-        "cumulative_points": "Cumulative Points",
-        "driver_name": "Driver",
-    },
-    title=f"{season} Driver Championship — Top {top_n}",
+    labels={"round_number": "Round", "cumulative_points": "Points", "driver_name": "Driver"},
     hover_data=["event_name", "championship_position"],
 )
+fig.update_traces(line=dict(width=2.5), marker=dict(size=6))
 fig.update_layout(
-    xaxis=dict(tickmode="linear", dtick=1),
-    legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
-    height=500,
+    **PLOTLY_LAYOUT,
+    height=460,
+    xaxis=dict(tickmode="linear", dtick=1, gridcolor="#2A2A2A"),
+    yaxis=dict(gridcolor="#2A2A2A"),
+    title=dict(text=f"{season} Championship — Cumulative Points", font=dict(size=16)),
 )
 st.plotly_chart(fig, use_container_width=True)
 
 st.markdown("---")
-st.subheader("Points per Round")
-
-points_per_round = query(f"""
-    select
-        round_number,
-        event_name,
-        driver_name,
-        points_this_round
-    from {table('mart_driver_standings')}
-    where season = {season}
-      and driver_name in ({driver_list})
-    order by round_number, driver_name
-""")
+st.subheader("Points Scored Per Round")
 
 fig2 = px.bar(
     points_per_round,
@@ -80,17 +73,14 @@ fig2 = px.bar(
     y="points_this_round",
     color="driver_name",
     barmode="group",
-    labels={
-        "round_number": "Round",
-        "points_this_round": "Points Scored",
-        "driver_name": "Driver",
-    },
+    labels={"round_number": "Round", "points_this_round": "Points", "driver_name": "Driver"},
     hover_data=["event_name"],
-    title=f"{season} Points Scored Each Round — Top {top_n}",
 )
 fig2.update_layout(
-    xaxis=dict(tickmode="linear", dtick=1),
-    legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
-    height=400,
+    **PLOTLY_LAYOUT,
+    height=360,
+    xaxis=dict(tickmode="linear", dtick=1, gridcolor="#2A2A2A"),
+    yaxis=dict(gridcolor="#2A2A2A"),
+    title=dict(text="Points Per Round", font=dict(size=16)),
 )
 st.plotly_chart(fig2, use_container_width=True)

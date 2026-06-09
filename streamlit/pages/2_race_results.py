@@ -1,22 +1,24 @@
 import streamlit as st
-
 from utils.bigquery import query, table
+from utils.styles import inject_css, TEAM_COLOURS
 
-st.set_page_config(page_title="Race Results", page_icon="🏁", layout="wide")
-st.title("🏁 Race Results")
+st.set_page_config(page_title="Race Results — F1 Analytics", layout="wide")
+inject_css()
 
-season = st.selectbox("Season", [2024], index=0)
+st.title("Race Results")
+
+season = st.selectbox("Season", [2024], index=0, label_visibility="collapsed")
 
 with st.spinner("Loading races..."):
     races = query(f"""
-        select distinct round_number, event_name
+        select distinct round_number, event_name, circuit, country
         from {table('mart_race_results')}
         where season = {season}
         order by round_number
     """)
 
 race_options = {
-    f"Round {int(r['round_number'])} — {r['event_name']}": int(r["round_number"])
+    f"Round {int(r['round_number'])}  ·  {r['event_name']}": int(r["round_number"])
     for _, r in races.iterrows()
 }
 selected_label = st.selectbox("Race", list(race_options.keys()))
@@ -35,17 +37,22 @@ with st.spinner("Loading results..."):
             status,
             did_not_finish
         from {table('mart_race_results')}
-        where season = {season}
-          and round_number = {selected_round}
+        where season = {season} and round_number = {selected_round}
         order by finish_position
     """)
 
-col1, col2, col3 = st.columns(3)
 winner = results[results["pos"] == 1].iloc[0]
-col1.metric("Winner", winner["driver_name"])
-col2.metric("Team", winner["team_name"])
+p2 = results[results["pos"] == 2].iloc[0] if len(results) > 1 else None
+p3 = results[results["pos"] == 3].iloc[0] if len(results) > 2 else None
 dnf_count = int(results["did_not_finish"].sum())
-col3.metric("DNFs", dnf_count)
+
+col1, col2, col3, col4 = st.columns(4)
+col1.metric("Winner", winner["driver_name"], winner["team_name"])
+if p2 is not None:
+    col2.metric("P2", p2["driver_name"], p2["team_name"])
+if p3 is not None:
+    col3.metric("P3", p3["driver_name"], p3["team_name"])
+col4.metric("Retirements", dnf_count)
 
 st.markdown("---")
 
@@ -55,15 +62,17 @@ display["Pos"] = display["Pos"].astype(int)
 display["Grid"] = display["Grid"].astype(int)
 display["Points"] = display["Points"].astype(float)
 
-def highlight_dnf(row):
+def highlight_row(row):
     if row["Status"] != "Finished":
-        return ["background-color: #3d1a1a"] * len(row)
+        return ["color: #888888"] * len(row)
+    elif row["Pos"] == 1:
+        return [f"color: #E8002D; font-weight: 700"] * len(row)
     elif row["Pos"] <= 3:
-        return ["background-color: #1a3d1a"] * len(row)
+        return ["font-weight: 600"] * len(row)
     return [""] * len(row)
 
 st.dataframe(
-    display.style.apply(highlight_dnf, axis=1),
+    display.style.apply(highlight_row, axis=1),
     use_container_width=True,
     hide_index=True,
 )

@@ -1,12 +1,12 @@
 import plotly.express as px
 import streamlit as st
 from utils.bigquery import query, table
-from utils.styles import inject_css, PLOTLY_LAYOUT, TEAM_COLOURS
+from utils.styles import inject_css, page_header, section_label, divider, PLOTLY_LAYOUT, TEAM_COLOURS
 
 st.set_page_config(page_title="Constructor Battle — F1 Analytics", layout="wide")
 inject_css()
 
-st.title("Constructor Championship")
+page_header("Constructor Championship", "Constructors' standings and cumulative points race")
 
 season = st.selectbox("Season", [2024], index=0, label_visibility="collapsed")
 
@@ -52,7 +52,8 @@ if runner_up is not None:
     col3.metric("Runner-Up", runner_up["constructor_name"])
     col4.metric("Gap", f"{gap} pts")
 
-st.markdown("---")
+divider()
+section_label("Cumulative Points Race")
 
 colour_map = {name: TEAM_COLOURS.get(name, "#888888") for name in progression["constructor_name"].unique()}
 
@@ -70,14 +71,14 @@ fig.update_traces(line=dict(width=2.5), marker=dict(size=6))
 fig.update_layout(
     **PLOTLY_LAYOUT,
     height=460,
-    title=dict(text=f"{season} Constructors' Championship — Cumulative Points", font=dict(size=16)),
+    title=dict(text=f"{season} Constructors' Championship — Cumulative Points", font=dict(size=15)),
 )
-fig.update_xaxes(tickmode="linear", dtick=1, gridcolor="#2A2A2A")
-fig.update_yaxes(gridcolor="#2A2A2A")
+fig.update_xaxes(tickmode="linear", dtick=1, gridcolor="#1E1E1E")
+fig.update_yaxes(gridcolor="#1E1E1E")
 st.plotly_chart(fig, use_container_width=True)
 
-st.markdown("---")
-st.subheader("Final Standings")
+divider()
+section_label("Final Standings")
 
 final_display = final.copy()
 final_display.columns = ["Pos", "Constructor", "Nationality", "Points", "Wins"]

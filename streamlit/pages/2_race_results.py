@@ -1,11 +1,11 @@
 import streamlit as st
 from utils.bigquery import query, table
-from utils.styles import inject_css, TEAM_COLOURS
+from utils.styles import inject_css, page_header, section_label, divider, F1_RED
 
 st.set_page_config(page_title="Race Results — F1 Analytics", layout="wide")
 inject_css()
 
-st.title("Race Results")
+page_header("Race Results", "Circuit-by-circuit breakdown for every round")
 
 season = st.selectbox("Season", [2024], index=0, label_visibility="collapsed")
 
@@ -54,7 +54,8 @@ if p3 is not None:
     col3.metric("P3", p3["driver_name"], p3["team_name"])
 col4.metric("Retirements", dnf_count)
 
-st.markdown("---")
+divider()
+section_label("Classification")
 
 display = results.drop(columns=["did_not_finish"]).copy()
 display.columns = ["Pos", "Driver", "Nationality", "Team", "Grid", "Pos Gained", "Points", "Status"]
@@ -62,17 +63,24 @@ display["Pos"] = display["Pos"].astype(int)
 display["Grid"] = display["Grid"].astype(int)
 display["Points"] = display["Points"].astype(float)
 
+
 def highlight_row(row):
     if row["Status"] != "Finished":
-        return ["color: #888888"] * len(row)
+        return ["color: #555"] * len(row)
     elif row["Pos"] == 1:
-        return [f"color: #E8002D; font-weight: 700"] * len(row)
+        return [f"color: {F1_RED}; font-weight: 700"] * len(row)
     elif row["Pos"] <= 3:
         return ["font-weight: 600"] * len(row)
     return [""] * len(row)
+
 
 st.dataframe(
     display.style.apply(highlight_row, axis=1),
     use_container_width=True,
     hide_index=True,
+    column_config={
+        "Pos": st.column_config.NumberColumn(width="small"),
+        "Grid": st.column_config.NumberColumn(width="small"),
+        "Points": st.column_config.NumberColumn(width="small"),
+    },
 )

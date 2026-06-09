@@ -1,13 +1,12 @@
-import plotly.express as px
 import plotly.graph_objects as go
 import streamlit as st
 from utils.bigquery import query, table
-from utils.styles import inject_css, PLOTLY_LAYOUT, F1_RED, TEAM_COLOURS
+from utils.styles import inject_css, page_header, section_label, divider, PLOTLY_LAYOUT, F1_RED, TEAM_COLOURS
 
 st.set_page_config(page_title="Driver Profile — F1 Analytics", layout="wide")
 inject_css()
 
-st.title("Driver Profile")
+page_header("Driver Profile", "Individual race results and performance trends")
 
 col_left, col_right = st.columns([2, 2])
 with col_left:
@@ -59,9 +58,9 @@ col3.metric("Podiums", podiums)
 col4.metric("Total Points", total_points)
 col5.metric("DNFs", dnfs)
 
-st.markdown("---")
+divider()
+section_label("Points per Race")
 
-# Points per race — colour each bar by team
 team_colour_map = {t: TEAM_COLOURS.get(t, "#888888") for t in results["team_name"].unique()}
 bar_colours = results["team_name"].map(team_colour_map).tolist()
 
@@ -84,16 +83,16 @@ fig.add_trace(go.Bar(
 fig.update_layout(
     **PLOTLY_LAYOUT,
     height=400,
-    title=dict(text=f"{selected_driver} — Points per Race ({season})", font=dict(size=16)),
+    title=dict(text=f"{selected_driver} — Points per Race ({season})", font=dict(size=15)),
     showlegend=False,
 )
-fig.update_xaxes(tickmode="linear", dtick=1, gridcolor="#2A2A2A", title="Round")
-fig.update_yaxes(gridcolor="#2A2A2A", title="Points")
+fig.update_xaxes(tickmode="linear", dtick=1, gridcolor="#1E1E1E", title="Round")
+fig.update_yaxes(gridcolor="#1E1E1E", title="Points")
 st.plotly_chart(fig, use_container_width=True)
 
-st.markdown("---")
+divider()
+section_label("Finishing Positions")
 
-# Finishing position scatter
 fig2 = go.Figure()
 finished = results[~results["did_not_finish"]]
 dnf_rows = results[results["did_not_finish"]]
@@ -118,7 +117,7 @@ if len(dnf_rows):
         y=[25] * len(dnf_rows),
         mode="markers",
         name="DNF",
-        marker=dict(symbol="x", size=12, color="#888888"),
+        marker=dict(symbol="x", size=12, color="#555"),
         customdata=dnf_rows[["event_name", "status"]].values,
         hovertemplate=(
             "<b>Round %{x}</b> — %{customdata[0]}<br>"
@@ -128,15 +127,15 @@ if len(dnf_rows):
 fig2.update_layout(
     **PLOTLY_LAYOUT,
     height=360,
-    title=dict(text="Finishing Positions", font=dict(size=16)),
+    title=dict(text="Finishing Positions", font=dict(size=15)),
 )
-fig2.update_xaxes(tickmode="linear", dtick=1, gridcolor="#2A2A2A", title="Round")
-fig2.update_yaxes(autorange="reversed", gridcolor="#2A2A2A", title="Finish Position",
+fig2.update_xaxes(tickmode="linear", dtick=1, gridcolor="#1E1E1E", title="Round")
+fig2.update_yaxes(autorange="reversed", gridcolor="#1E1E1E", title="Finish Position",
                   tickvals=list(range(1, 21, 2)))
 st.plotly_chart(fig2, use_container_width=True)
 
-st.markdown("---")
-st.subheader("Race-by-Race Breakdown")
+divider()
+section_label("Race-by-Race Breakdown")
 
 display = results[["round_number", "event_name", "team_name", "grid_position",
                     "finish_position", "positions_gained", "points", "status"]].copy()
@@ -146,14 +145,16 @@ display["Grid"] = display["Grid"].astype(int)
 display["Finish"] = display["Finish"].astype(int)
 display["Points"] = display["Points"].astype(float)
 
+
 def highlight_profile_row(row):
     if row["Status"] != "Finished":
-        return ["color: #888888"] * len(row)
+        return ["color: #555"] * len(row)
     elif row["Finish"] == 1:
         return [f"color: {F1_RED}; font-weight: 700"] * len(row)
     elif row["Finish"] <= 3:
         return ["font-weight: 600"] * len(row)
     return [""] * len(row)
+
 
 st.dataframe(
     display.style.apply(highlight_profile_row, axis=1),

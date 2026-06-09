@@ -1,11 +1,11 @@
 import streamlit as st
 from utils.bigquery import query, table
-from utils.styles import inject_css
+from utils.styles import inject_css, page_header, section_label, divider
 
 st.set_page_config(page_title="Season Overview — F1 Analytics", layout="wide")
 inject_css()
 
-st.title("Season Overview")
+page_header("Season Overview", "Final standings and season highlights")
 
 season = st.selectbox("Season", [2024], index=0, label_visibility="collapsed")
 
@@ -65,8 +65,8 @@ col4.metric(
     f"{int(podiums.iloc[0]['podiums'])} podiums",
 )
 
-st.markdown("---")
-st.subheader("Driver Championship — Final Standings")
+divider()
+section_label("Driver Championship — Final Standings")
 
 standings_display = final_standings.copy()
 standings_display.columns = ["Pos", "Driver", "Nationality", "Code", "Points", "Wins"]

@@ -1,19 +1,18 @@
 import plotly.express as px
-import plotly.graph_objects as go
 import streamlit as st
 from utils.bigquery import query, table
-from utils.styles import inject_css, PLOTLY_LAYOUT, F1_RED
+from utils.styles import inject_css, page_header, section_label, divider, PLOTLY_LAYOUT
 
 st.set_page_config(page_title="Championship Battle — F1 Analytics", layout="wide")
 inject_css()
 
-st.title("Driver Championship")
+page_header("Driver Championship", "Points progression and per-round breakdown")
 
 col_left, col_right = st.columns([3, 1])
 with col_left:
     season = st.selectbox("Season", [2024], index=0, label_visibility="collapsed")
 with col_right:
-    top_n = st.slider("Drivers", min_value=3, max_value=10, value=5)
+    top_n = st.slider("Drivers shown", min_value=3, max_value=10, value=5)
 
 with st.spinner("Loading..."):
     top_drivers = query(f"""
@@ -45,6 +44,8 @@ with st.spinner("Loading..."):
         order by round_number, driver_name
     """)
 
+section_label("Cumulative Points")
+
 fig = px.line(
     progression,
     x="round_number",
@@ -58,14 +59,14 @@ fig.update_traces(line=dict(width=2.5), marker=dict(size=6))
 fig.update_layout(
     **PLOTLY_LAYOUT,
     height=460,
-    title=dict(text=f"{season} Championship — Cumulative Points", font=dict(size=16)),
+    title=dict(text=f"{season} Championship — Cumulative Points", font=dict(size=15)),
 )
-fig.update_xaxes(tickmode="linear", dtick=1, gridcolor="#2A2A2A")
-fig.update_yaxes(gridcolor="#2A2A2A")
+fig.update_xaxes(tickmode="linear", dtick=1, gridcolor="#1E1E1E")
+fig.update_yaxes(gridcolor="#1E1E1E")
 st.plotly_chart(fig, use_container_width=True)
 
-st.markdown("---")
-st.subheader("Points Scored Per Round")
+divider()
+section_label("Points Scored Per Round")
 
 fig2 = px.bar(
     points_per_round,
@@ -79,8 +80,8 @@ fig2 = px.bar(
 fig2.update_layout(
     **PLOTLY_LAYOUT,
     height=360,
-    title=dict(text="Points Per Round", font=dict(size=16)),
+    title=dict(text="Points Per Round", font=dict(size=15)),
 )
-fig2.update_xaxes(tickmode="linear", dtick=1, gridcolor="#2A2A2A")
-fig2.update_yaxes(gridcolor="#2A2A2A")
+fig2.update_xaxes(tickmode="linear", dtick=1, gridcolor="#1E1E1E")
+fig2.update_yaxes(gridcolor="#1E1E1E")
 st.plotly_chart(fig2, use_container_width=True)

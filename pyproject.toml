@@ -2,7 +2,7 @@
 name = "f1-analytics-pipeline"
 version = "0.1.0"
 description = "End-to-end F1 analytics pipeline: FastF1 + OpenWeatherMap + Ergast → GCS → BigQuery → dbt → Streamlit"
-requires-python = ">=3.13"
+requires-python = ">=3.11"
 
 dependencies = [
     "fastf1>=3.4",

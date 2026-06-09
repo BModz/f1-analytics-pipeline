@@ -1,6 +1,6 @@
 import streamlit as st
 from utils.bigquery import query, table
-from utils.styles import inject_css, page_header, section_label, divider, F1_RED
+from utils.styles import inject_css, page_header, section_label, divider, render_podium, f1_table, TEAM_COLOURS
 
 st.set_page_config(page_title="Race Results — F1 Analytics", layout="wide")
 inject_css()
@@ -41,46 +41,61 @@ with st.spinner("Loading results..."):
         order by finish_position
     """)
 
-winner = results[results["pos"] == 1].iloc[0]
-p2 = results[results["pos"] == 2].iloc[0] if len(results) > 1 else None
-p3 = results[results["pos"] == 3].iloc[0] if len(results) > 2 else None
-dnf_count = int(results["did_not_finish"].sum())
+# ── Race podium ───────────────────────────────────────────────────────────────
+podium_rows = results[~results["did_not_finish"].astype(bool)]
+if len(podium_rows) >= 3:
+    p1r = podium_rows[podium_rows["pos"] == 1].iloc[0]
+    p2r = podium_rows[podium_rows["pos"] == 2].iloc[0] if len(podium_rows[podium_rows["pos"] == 2]) else podium_rows.iloc[1]
+    p3r = podium_rows[podium_rows["pos"] == 3].iloc[0] if len(podium_rows[podium_rows["pos"] == 3]) else podium_rows.iloc[2]
+    render_podium(
+        p1={"name": p1r["driver_name"], "sub": p1r["team_name"], "value": f'{int(p1r["points"])} pts'},
+        p2={"name": p2r["driver_name"], "sub": p2r["team_name"], "value": f'{int(p2r["points"])} pts'},
+        p3={"name": p3r["driver_name"], "sub": p3r["team_name"], "value": f'{int(p3r["points"])} pts'},
+    )
+    divider()
 
-col1, col2, col3, col4 = st.columns(4)
-col1.metric("Winner", winner["driver_name"], winner["team_name"])
-if p2 is not None:
-    col2.metric("P2", p2["driver_name"], p2["team_name"])
-if p3 is not None:
-    col3.metric("P3", p3["driver_name"], p3["team_name"])
-col4.metric("Retirements", dnf_count)
+# ── Summary metrics ───────────────────────────────────────────────────────────
+dnf_count = int(results["did_not_finish"].astype(bool).sum())
+total_pts_awarded = int(results["points"].sum())
+fastest_gainer = results.sort_values("positions_gained", ascending=False).iloc[0]
+
+col1, col2, col3 = st.columns(3)
+col1.metric("Retirements", dnf_count)
+col2.metric("Points Awarded", total_pts_awarded)
+col3.metric("Most Positions Gained", fastest_gainer["driver_name"], f'+{int(fastest_gainer["positions_gained"])}')
 
 divider()
-section_label("Classification")
+section_label("Race Classification")
 
-display = results.drop(columns=["did_not_finish"]).copy()
-display.columns = ["Pos", "Driver", "Nationality", "Team", "Grid", "Pos Gained", "Points", "Status"]
-display["Pos"] = display["Pos"].astype(int)
-display["Grid"] = display["Grid"].astype(int)
-display["Points"] = display["Points"].astype(float)
+# ── Results table ─────────────────────────────────────────────────────────────
+rows = ""
+for _, row in results.iterrows():
+    dnf = bool(row["did_not_finish"])
+    pos_val = "DNF" if dnf else int(row["pos"])
+    medal = f"medal-{int(row['pos'])}" if not dnf and int(row["pos"]) <= 3 else ""
+    team_color = TEAM_COLOURS.get(row["team_name"], "#444")
+    try:
+        gained = int(row["positions_gained"])
+    except (ValueError, TypeError):
+        gained = 0
+    if gained > 0:
+        gain_html = f'<span class="gain-pos">&#9650; +{gained}</span>'
+    elif gained < 0:
+        gain_html = f'<span class="gain-neg">&#9660; {gained}</span>'
+    else:
+        gain_html = '<span class="gain-neu">—</span>'
+    status_cls = "status-fin" if row["status"] == "Finished" else "status-dnf"
+    pts = int(row["points"]) if not dnf else "—"
+    rows += (
+        f'<tr>'
+        f'<td class="td-pos {medal}">{pos_val}</td>'
+        f'<td class="td-main">{row["driver_name"]}<span class="td-sub">{row["driver_nationality"]}</span></td>'
+        f'<td><span class="td-dot" style="background:{team_color}"></span>{row["team_name"]}</td>'
+        f'<td style="color:#aaa">{int(row["grid"])}</td>'
+        f'<td>{gain_html}</td>'
+        f'<td class="td-main">{pts}</td>'
+        f'<td><span class="{status_cls}">{row["status"]}</span></td>'
+        f'</tr>'
+    )
 
-
-def highlight_row(row):
-    if row["Status"] != "Finished":
-        return ["color: #555"] * len(row)
-    elif row["Pos"] == 1:
-        return [f"color: {F1_RED}; font-weight: 700"] * len(row)
-    elif row["Pos"] <= 3:
-        return ["font-weight: 600"] * len(row)
-    return [""] * len(row)
-
-
-st.dataframe(
-    display.style.apply(highlight_row, axis=1),
-    use_container_width=True,
-    hide_index=True,
-    column_config={
-        "Pos": st.column_config.NumberColumn(width="small"),
-        "Grid": st.column_config.NumberColumn(width="small"),
-        "Points": st.column_config.NumberColumn(width="small"),
-    },
-)
+f1_table(["Pos", "Driver", "Constructor", "Grid", "+/−", "Points", "Status"], rows)

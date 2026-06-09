@@ -5,8 +5,7 @@ Tests cover retry logic and data transformation — no real HTTP calls are made.
 """
 
 import sys
-import time
-from unittest.mock import MagicMock, call, patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 
@@ -15,33 +14,35 @@ sys.path.insert(0, "ingestion")
 import jolpica_pipeline
 
 
-def make_response(status_code: int, json_data: dict = None) -> MagicMock:
-    resp = MagicMock()
-    resp.status_code = status_code
-    if json_data is not None:
-        resp.json.return_value = json_data
-    if status_code >= 400:
-        resp.raise_for_status.side_effect = Exception(f"HTTP {status_code}")
-    else:
-        resp.raise_for_status.return_value = None
-    return resp
+class MockResponse:
+    """Plain response stub — avoids MagicMock attribute quirks across Python versions."""
+
+    def __init__(self, status_code: int, json_data: dict = None):
+        self.status_code = status_code
+        self._json_data = json_data
+
+    def raise_for_status(self):
+        if self.status_code >= 400:
+            from requests.exceptions import HTTPError
+            raise HTTPError(f"HTTP {self.status_code}")
+
+    def json(self):
+        return self._json_data
 
 
 class TestFetch:
     def test_successful_request(self):
         payload = {"MRData": {"total": "24"}}
-        mock_resp = make_response(200, payload)
 
-        with patch("jolpica_pipeline.requests.get", return_value=mock_resp):
+        with patch("jolpica_pipeline.requests.get", return_value=MockResponse(200, payload)):
             result = jolpica_pipeline.fetch("2024/races.json")
 
         assert result == payload
 
     def test_retries_on_429_then_succeeds(self):
-        resp_429 = make_response(429)
-        resp_200 = make_response(200, {"data": "ok"})
+        responses = [MockResponse(429), MockResponse(200, {"data": "ok"})]
 
-        with patch("jolpica_pipeline.requests.get", side_effect=[resp_429, resp_200]):
+        with patch("jolpica_pipeline.requests.get", side_effect=responses):
             with patch("jolpica_pipeline.time.sleep") as mock_sleep:
                 result = jolpica_pipeline.fetch("endpoint", retries=3)
 
@@ -49,27 +50,19 @@ class TestFetch:
         mock_sleep.assert_called()
 
     def test_raises_after_exhausting_retries(self):
-        resp_429 = make_response(429)
-
-        with patch("jolpica_pipeline.requests.get", return_value=resp_429):
+        with patch("jolpica_pipeline.requests.get", return_value=MockResponse(429)):
             with patch("jolpica_pipeline.time.sleep"):
                 with pytest.raises(RuntimeError, match="Failed to fetch"):
                     jolpica_pipeline.fetch("endpoint", retries=2)
 
     def test_429_backoff_increases_with_attempt(self):
-        resp_429 = make_response(429)
-        resp_200 = make_response(200, {"data": "ok"})
-
+        responses = [MockResponse(429), MockResponse(429), MockResponse(200, {"data": "ok"})]
         sleep_calls = []
 
-        def capture_sleep(seconds):
-            sleep_calls.append(seconds)
-
-        with patch("jolpica_pipeline.requests.get", side_effect=[resp_429, resp_429, resp_200]):
-            with patch("jolpica_pipeline.time.sleep", side_effect=capture_sleep):
+        with patch("jolpica_pipeline.requests.get", side_effect=responses):
+            with patch("jolpica_pipeline.time.sleep", side_effect=sleep_calls.append):
                 jolpica_pipeline.fetch("endpoint", retries=5)
 
-        # Each 429 back-off should be larger than the previous
         assert sleep_calls[0] < sleep_calls[1]
 
 
